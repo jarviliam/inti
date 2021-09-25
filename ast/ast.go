@@ -2,6 +2,7 @@ package ast
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/jarviliam/inti/token"
 )
@@ -171,4 +172,89 @@ func (b *Boolean) expressionNode()      {}
 func (b *Boolean) TokenLiteral() string { return b.Token.Literal }
 func (b *Boolean) String() string {
 	return b.Token.Literal
+}
+
+type IfExpression struct {
+	Token       token.Token
+	Condition   Expression
+	Consequence *BlockStatement
+	Alternative *BlockStatement
+}
+
+func (i *IfExpression) expressionNode()      {}
+func (i *IfExpression) TokenLiteral() string { return i.Token.Literal }
+func (i *IfExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("if")
+	out.WriteString(i.Condition.String())
+	out.WriteString(" ")
+	out.WriteString(i.Consequence.String())
+	if i.Alternative != nil {
+		out.WriteString("else ")
+		out.WriteString(i.Alternative.String())
+	}
+
+	return out.String()
+}
+
+type BlockStatement struct {
+	Token      token.Token
+	Statements []Statement
+}
+
+func (b *BlockStatement) expressionNode()      {}
+func (b *BlockStatement) TokenLiteral() string { return b.Token.Literal }
+func (b *BlockStatement) String() string {
+	var out bytes.Buffer
+
+	for _, s := range b.Statements {
+		out.WriteString(s.String())
+	}
+	return out.String()
+}
+
+type FunctionLiteral struct {
+	Token  token.Token
+	Params []*Identifier
+	Block  *BlockStatement
+}
+
+func (f *FunctionLiteral) expressionNode()      {}
+func (f *FunctionLiteral) TokenLiteral() string { return f.Token.Literal }
+func (f *FunctionLiteral) String() string {
+	var out bytes.Buffer
+
+	params := []string{}
+	for _, s := range f.Params {
+		params = append(params, s.String())
+	}
+	out.WriteString(f.TokenLiteral())
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ","))
+	out.WriteString(")")
+	out.WriteString(f.Block.String())
+	return out.String()
+}
+
+type CallExpression struct {
+	Token    token.Token
+	Function Expression
+	Args     []Expression
+}
+
+func (c *CallExpression) expressionNode()      {}
+func (c *CallExpression) TokenLiteral() string { return c.Token.Literal }
+func (c *CallExpression) String() string {
+	var out bytes.Buffer
+
+	args := []string{}
+	for _, s := range c.Args {
+		args = append(args, s.String())
+	}
+	out.WriteString(c.Function.String())
+	out.WriteString("(")
+	out.WriteString(strings.Join(args, ","))
+	out.WriteString(")")
+	return out.String()
 }

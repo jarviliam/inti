@@ -319,6 +319,172 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 	}
 }
 
+func TestIfExpression(t *testing.T) {
+	input := `if (x < y) { x }`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserError(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("statements dont equal; want : 1; got : %d", len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+
+	if !ok {
+		t.Fatalf("program Statement is not an ast.ExpressionStatement; got: %T", program.Statements[0])
+	}
+	exp, ok := stmt.Expression.(*ast.IfExpression)
+	if !ok {
+		t.Fatalf("Expected if expression got : %T", exp)
+		return
+	}
+
+	if !testInfixExpression(t, exp.Condition, "x", "<", "y") {
+		return
+	}
+	if len(exp.Consequence.Statements) != 1 {
+		t.Errorf("Expected if statement to have consequence got : %d", len(exp.Consequence.Statements))
+	}
+
+	consequence, ok := exp.Consequence.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("Consequence is not an expression; got %T", exp.Consequence.Statements[0])
+	}
+
+	if !testIdentifier(t, consequence.Expression, "x") {
+		return
+	}
+	if exp.Alternative != nil {
+		t.Errorf("Expected Alternative to be nil; got %+v", exp.Alternative)
+	}
+
+}
+func TestIfElseExpression(t *testing.T) {
+	input := `if (x < y) { x } else { y }`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserError(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("statements dont equal; want : 1; got : %d", len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+
+	if !ok {
+		t.Fatalf("program Statement is not an ast.ExpressionStatement; got: %T", program.Statements[0])
+	}
+	exp, ok := stmt.Expression.(*ast.IfExpression)
+	if !ok {
+		t.Fatalf("Expected if expression got : %T", exp)
+		return
+	}
+
+	if !testInfixExpression(t, exp.Condition, "x", "<", "y") {
+		return
+	}
+	if len(exp.Consequence.Statements) != 1 {
+		t.Errorf("Expected if statement to have consequence got : %d", len(exp.Consequence.Statements))
+	}
+
+	consequence, ok := exp.Consequence.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("Consequence is not an expression; got %T", exp.Consequence.Statements[0])
+	}
+
+	if !testIdentifier(t, consequence.Expression, "x") {
+		return
+	}
+	if exp.Alternative == nil {
+		t.Errorf("Expected Alternative to not be nil; got %+v", exp.Alternative)
+	}
+	if len(exp.Alternative.Statements) != 1 {
+		t.Errorf("Alternative should only have one statement ; got %d", len(exp.Alternative.Statements))
+	}
+	alternative, ok := exp.Alternative.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("Alternative is not an expression; got %T", exp.Alternative.Statements[0])
+	}
+	if !testIdentifier(t, alternative.Expression, "y") {
+		return
+	}
+}
+func TestFNLiteralExpression(t *testing.T) {
+	input := `fn(x,y){x+y;}`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserError(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("statements dont equal; want : 1; got : %d", len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program Statement is not an ast.ExpressionStatement; got: %T", program.Statements[0])
+	}
+
+	fl, ok := stmt.Expression.(*ast.FunctionLiteral)
+	if !ok {
+		t.Fatalf("not a function literal %T", stmt)
+	}
+	if len(fl.Params) != 2 {
+		t.Fatalf("fl params not 2 : %d", len(fl.Params))
+	}
+	testLiteralExpression(t, fl.Params[0], "x")
+	testLiteralExpression(t, fl.Params[1], "y")
+
+	if len(fl.Block.Statements) != 1 {
+		t.Fatalf("body size not 1 : %d", len(fl.Block.Statements))
+	}
+
+	body, ok := fl.Block.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("statement not exp : %T", fl.Block.Statements[0])
+	}
+	testInfixExpression(t, body.Expression, "x", "+", "y")
+}
+func TestFNParamsParsing(t *testing.T) {
+	testCases := []struct {
+		in     string
+		expect []string
+	}{
+		{
+			in: "fn(){};", expect: []string{},
+		},
+		{
+			in: "fn(x){};", expect: []string{"x"},
+		},
+		{
+			in: "fn(x,y,z){};", expect: []string{"x", "y", "z"},
+		},
+	}
+	for _, tC := range testCases {
+		l := lexer.New(tC.in)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserError(t, p)
+
+		stmt := program.Statements[0].(*ast.ExpressionStatement)
+		fn := stmt.Expression.(*ast.FunctionLiteral)
+
+		if len(fn.Params) != len(tC.expect) {
+			t.Errorf("Params len didnt match")
+		}
+
+		for i, id := range tC.expect {
+			testLiteralExpression(t, fn.Params[i], id)
+		}
+	}
+}
+
 func checkParserError(t *testing.T, p *Parser) {
 	err := p.Errors()
 	if len(err) == 0 {

@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/jarviliam/inti/lexer"
-	"github.com/jarviliam/inti/token"
+	"github.com/jarviliam/inti/parser"
 )
 
 const PROMPT = ">> "
@@ -22,8 +22,20 @@ func Start(in io.Reader, out io.Writer) {
 		}
 		line := s.Text()
 		l := lexer.New(line)
-		for tok := l.NextToken(); tok.Type != token.EOF; tok = l.NextToken() {
-			fmt.Fprintf(out, "%+v\n", tok)
+		p := parser.New(l)
+
+		program := p.ParseProgram()
+		if len(p.Errors()) != 0 {
+			printParserError(out, p.Errors())
+			continue
 		}
+		io.WriteString(out, program.String())
+		io.WriteString(out, "\n")
+	}
+}
+
+func printParserError(out io.Writer, errors []string) {
+	for _, m := range errors {
+		io.WriteString(out, "\t"+m+"\n")
 	}
 }

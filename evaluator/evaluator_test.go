@@ -35,6 +35,20 @@ func TestEvalBooleanExpression(t *testing.T) {
 	}
 }
 
+func TestBangOp(t *testing.T) {
+	tests := []struct {
+		in  string
+		exp bool
+	}{
+		{"!true", false},
+		{"!false", true},
+	}
+	for _, tc := range tests {
+		evaluated := testEval(tc.in)
+		testBooleanObject(t, evaluated, tc.exp)
+	}
+}
+
 func testEval(input string) object.Object {
 	l := lexer.New(input)
 	p := parser.New(l)

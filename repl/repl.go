@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/jarviliam/inti/evaluator"
 	"github.com/jarviliam/inti/lexer"
 	"github.com/jarviliam/inti/parser"
 )
@@ -29,8 +30,11 @@ func Start(in io.Reader, out io.Writer) {
 			printParserError(out, p.Errors())
 			continue
 		}
-		io.WriteString(out, program.String())
-		io.WriteString(out, "\n")
+		evaluated := evaluator.Eval(program)
+		if evaluated != nil {
+			io.WriteString(out, evaluated.Inspect())
+			io.WriteString(out, "\n")
+		}
 	}
 }
 
